@@ -1,0 +1,2 @@
+# libdmd
+Devmode library.
