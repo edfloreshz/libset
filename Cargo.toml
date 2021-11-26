@@ -1,0 +1,24 @@
+[package]
+name = "libdmd"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0"
+description = "This library can be used to build clients for Devmode."
+homepage = "https://devmode.edfloreshz.dev/"
+documentation = "https://docs.rs/libdmd"
+repository = "https://github.com/edfloreshz/libdmd/"
+readme = "README.md"
+exclude = [
+    ".idea",
+]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.44"
+regex = "1.5.4"
+walkdir = "2.3.2"
+git2 = "0.13.22"
+dirs = "3.0.2"
+toml = "0.5.8"
+cmd_lib = "1.1.0"
+serde = { version = "1.0.126", features = ["derive"] }
