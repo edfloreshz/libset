@@ -4,7 +4,7 @@ use regex::bytes::Regex;
 
 use crate::home;
 use crate::utils::constants::messages::*;
-use crate::utils::host::Host;
+use crate::utils::host::host::Host;
 
 pub struct Clone {
     pub host: Host,

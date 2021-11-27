@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::home;
 use crate::utils::constants::messages::*;
-use crate::utils::host::Host;
+use crate::utils::host::host::Host;
 
 pub struct Fork {
     pub host: Host,

@@ -10,7 +10,7 @@ use crate::data;
 use crate::utils::constants::messages::*;
 use crate::utils::constants::paths::files::*;
 use crate::utils::constants::paths::folders::*;
-use crate::utils::editor::Editor;
+use crate::utils::editor::editor::Editor;
 
 pub trait ConfigWriter {
     fn write_to_config(&self) -> Result<()>;

@@ -12,7 +12,8 @@ use walkdir::WalkDir;
 use crate::utils::constants::messages::*;
 use crate::utils::constants::paths::files::DEVPATHS_FILE;
 use crate::utils::constants::paths::folders::{DEVELOPER_DIR, PATHS_DIR};
-use crate::utils::{config::AppOptions, editor::EditorApp};
+use crate::utils::config::config::AppOptions;
+use crate::utils::editor::editor::EditorApp;
 use crate::{data, home};
 
 pub struct Project {

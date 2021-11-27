@@ -22,3 +22,4 @@ dirs = "3.0.2"
 toml = "0.5.8"
 cmd_lib = "1.1.0"
 serde = { version = "1.0.126", features = ["derive"] }
+serde-value = "0.7.0"
