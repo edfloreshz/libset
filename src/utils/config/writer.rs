@@ -1,4 +1,4 @@
-use std::panic;
+use std::{borrow::Borrow, panic, path::PathBuf, ptr::NonNull};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize, de::{DeserializeOwned}};
@@ -6,50 +6,60 @@ use serde_value::Value;
 
 pub trait Writer {
     fn write() -> Result<()>;
-    fn set() -> Result<()>;
-    /// Calls get_field_by_name().
-    /// ```rust
-    /// fn get<T>(&self, field: &str) -> Option<T> {
-    ///     get_field_by_name(&self, "")
-    /// }
-    /// ```
-    fn get<T: Writer + Serialize, R: DeserializeOwned>(&self, field: &str) -> Option<R>;
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Default {
-    name: String,
+pub struct Options {
+    pub color: bool,
 }
 
-// impl Writer for Default {
-//     fn write() -> Result<()> {
-//         todo!()
-//     }
+impl Writer for Options {
+    fn write() -> Result<()> {
+        todo!()
+    }
+}
 
-//     fn set() -> Result<()> {
-//         todo!()
-//     }
-
-//     fn get<T, R>(&self, field: &str) -> Option<R> 
-//     where
-//         T: Writer + Serialize, 
-//         R: DeserializeOwned
-//     {
-//         let config = *self;
-//         get_field_by_name::<T, R>(&config, field)
-//     }
-// }
-
-/// Gets the value of a field by name.
-/// ```rust
-/// fn main() {
-///     let x: Option<i32> = get_field_by_name::<Point, i32>(&Point { x: 2, y: 4 }, "x");
-///     println!("{}", x.unwrap());
+/// Parse config file to a struct.
+/// 
+/// Eample: 
+/// ```rust 
+/// use libdmd::utils::config::writer::{parse, Options};
+/// use anyhow::Result;
+/// struct Config {
+///     color: bool
+/// }
+/// 
+/// fn main() -> Result<()> {
+///     let config = parse<Config>("/Users/eduardo/Library/Application Support/devmode/config/config.toml")?;
 /// }
 /// ```
-pub fn get_field_by_name<T, R>(data: &T, field: &str) -> Option<R> 
+fn parse<'a, T>(path: &str) -> Option<T> 
 where
-    T: Writer + Serialize,
+    T: Deserialize<'a>
+{
+    let path = PathBuf::from(path);
+    if !path.exists() {
+        return None;
+    }
+    let file = std::fs::read_to_string(path).ok()?;
+    let content = toml::from_slice::<T>(file.as_bytes()).ok()?; //TODO: Fix lifetime error.
+    Some(content)
+}
+
+/// Gets the value from a struct by field name
+/// 
+/// Example:
+/// ```rust
+/// use libdmd::utils::config::writer::{get, Options};
+/// fn main() {
+///     let options = Options { name: "Devmode".to_string() };
+///     let name: Option<String> = get::<Options, String>(&options, "name");
+///     println!("{}", name.unwrap());
+/// }
+/// ```
+pub fn get<T, R>(data: &T, field: &str) -> Option<R> 
+where
+    T: Serialize,
     R: DeserializeOwned
 {
     let mut map = match serde_value::to_value(data) {
@@ -65,5 +75,14 @@ where
     match R::deserialize::<_>(value) {
         Ok(r) => Some(r),
         Err(_) => panic!("wrong type"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::config::writer::*;
+    #[test]
+    fn check_get() {
+        assert_eq!(get::<String>("name").unwrap(), "Eddy");
     }
 }
