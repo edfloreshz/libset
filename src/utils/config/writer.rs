@@ -1,4 +1,3 @@
-use std::{borrow::Borrow, panic, path::PathBuf, ptr::NonNull};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize, de::{DeserializeOwned}};
@@ -33,18 +32,18 @@ impl Writer for Options {
 ///     let config = parse<Config>("/Users/eduardo/Library/Application Support/devmode/config/config.toml")?;
 /// }
 /// ```
-fn parse<'a, T>(path: &str) -> Option<T> 
-where
-    T: Deserialize<'a>
-{
-    let path = PathBuf::from(path);
-    if !path.exists() {
-        return None;
-    }
-    let file = std::fs::read_to_string(path).ok()?;
-    let content = toml::from_slice::<T>(file.as_bytes()).ok()?; //TODO: Fix lifetime error.
-    Some(content)
-}
+// fn parse<'a, T>(path: &str) -> Option<T> 
+// where
+//     T: Deserialize<'a>
+// {
+//     let path = PathBuf::from(path);
+//     if !path.exists() {
+//         return None;
+//     }
+//     let file = std::fs::read_to_string(path).ok()?;
+//     let content = toml::from_slice::<T>(file.as_bytes()).ok()?; //TODO: Fix lifetime error.
+//     Some(content)
+// }
 
 /// Gets the value from a struct by field name
 /// 
