@@ -1,6 +1,5 @@
-
 use anyhow::Result;
-use serde::{Deserialize, Serialize, de::{DeserializeOwned}};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_value::Value;
 
 pub trait Writer {
@@ -19,20 +18,20 @@ impl Writer for Options {
 }
 
 /// Parse config file to a struct.
-/// 
-/// Eample: 
-/// ```rust 
+///
+/// Eample:
+/// ```rust
 /// use libdmd::utils::config::writer::{parse, Options};
 /// use anyhow::Result;
 /// struct Config {
 ///     color: bool
 /// }
-/// 
+///
 /// fn main() -> Result<()> {
 ///     let config = parse<Config>("/Users/eduardo/Library/Application Support/devmode/config/config.toml")?;
 /// }
 /// ```
-// fn parse<'a, T>(path: &str) -> Option<T> 
+// fn parse<'a, T>(path: &str) -> Option<T>
 // where
 //     T: Deserialize<'a>
 // {
@@ -46,7 +45,7 @@ impl Writer for Options {
 // }
 
 /// Gets the value from a struct by field name
-/// 
+///
 /// Example:
 /// ```rust
 /// use libdmd::utils::config::writer::{get, Options};
@@ -56,19 +55,19 @@ impl Writer for Options {
 ///     println!("{}", name.unwrap());
 /// }
 /// ```
-pub fn get<T, R>(data: &T, field: &str) -> Option<R> 
+pub fn get<T, R>(data: &T, field: &str) -> Option<R>
 where
     T: Serialize,
-    R: DeserializeOwned
+    R: DeserializeOwned,
 {
     let mut map = match serde_value::to_value(data) {
         Ok(Value::Map(map)) => map,
-        _ => panic!("expected a struct")
+        _ => panic!("expected a struct"),
     };
     let key = Value::String(field.to_owned());
     let value = match map.remove(&key) {
-        Some(value) => value, 
-        None => panic!("no such field")
+        Some(value) => value,
+        None => panic!("no such field"),
     };
 
     match R::deserialize::<_>(value) {

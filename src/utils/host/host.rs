@@ -37,7 +37,13 @@ impl Host {
 pub fn is_host(args: &Vec<&str>) -> bool {
     let mut contains = false;
     for arg in args {
-        if arg.contains("gh") || arg.contains("gl") || arg.contains("github") || arg.contains("gitlab") || arg.contains("github.com") || arg.contains("gitlab.com") {
+        if arg.contains("gh")
+            || arg.contains("gl")
+            || arg.contains("github")
+            || arg.contains("gitlab")
+            || arg.contains("github.com")
+            || arg.contains("gitlab.com")
+        {
             contains = true;
             break;
         }

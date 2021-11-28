@@ -74,7 +74,7 @@ impl ConfigWriter for AppOptions {
             data().join(CONFIG_DIR),
             data().join(PATHS_DIR),
             data().join(CONFIG_FILE),
-            data().join(LOGS_DIR)
+            data().join(LOGS_DIR),
         ];
         for path in dirs {
             if !path.exists() {
@@ -106,5 +106,3 @@ impl ConfigWriter for AppOptions {
         Ok(())
     }
 }
-
-

@@ -30,7 +30,12 @@ impl Clone {
         Clone { host, owner, repos }
     }
     pub fn url(&self, index: usize) -> String {
-        format!("{}/{}/{}", self.host.url(), self.owner, self.repos.get(index).unwrap())
+        format!(
+            "{}/{}/{}",
+            self.host.url(),
+            self.owner,
+            self.repos.get(index).unwrap()
+        )
     }
 
     pub fn clone_repo(&self) -> Result<()> {
@@ -43,7 +48,8 @@ impl Clone {
                 repo
             );
             println!("Cloning {}/{} from {}...", self.owner, repo, self.host);
-            Repository::clone(self.url(ix).as_str(), &path).with_context(|| FAILED_TO_CLONE_REPO)?;
+            Repository::clone(self.url(ix).as_str(), &path)
+                .with_context(|| FAILED_TO_CLONE_REPO)?;
         }
         Ok(())
     }

@@ -23,6 +23,7 @@ toml = "0.5.8"
 cmd_lib = "1.1.0"
 serde = { version = "1.0.126", features = ["derive"] }
 serde-value = "0.7.0"
+serde_json = "1.0.72"
 
 [[example]]
 name = "client"
