@@ -16,7 +16,7 @@ pub struct FileBuilder {
     name: String,
     path: PathBuf,
     data: Option<String>,
-    pub(crate) format: FileFormat,
+    pub format: FileFormat,
 }
 
 impl FileBuilder {

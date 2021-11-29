@@ -12,11 +12,11 @@ use crate::utils::config::{
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DirectoryBuilder {
-    pub(crate) name: String,
-    pub(crate) path: PathBuf,
-    pub(crate) recursive: bool,
-    pub(crate) dirs: Vec<DirectoryBuilder>,
-    pub(crate) files: Vec<FileBuilder>
+    pub name: String,
+    pub path: PathBuf,
+    pub recursive: bool,
+    pub dirs: Vec<DirectoryBuilder>,
+    pub files: Vec<FileBuilder>
 }
 
 impl DirectoryBuilder {
