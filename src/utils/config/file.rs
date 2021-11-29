@@ -49,10 +49,10 @@ impl File {
         self.path = path.to_path_buf();
         self
     }
-    pub fn data<T: Serialize + Default + Clone>(mut self, data: &T) -> Result<Self> {
+    pub fn data<T: Serialize>(mut self, data: &T) -> Result<Self> {
         let data = match self.format {
             FileFormat::TOML => toml::to_string(&data)?,
-            FileFormat::JSON => serde_json::to_string(&data)?
+            FileFormat::JSON => serde_json::to_string(&data)?,
         };
         self.data = Some(data);
         Ok(self)

@@ -2,7 +2,7 @@ use anyhow::{Result};
 use serde::{Deserialize, Serialize};
 use core::default::Default;
 use std::fs::read_to_string;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Write};
 use serde::de::DeserializeOwned;
 use crate::data;
 use crate::utils::config::{
@@ -41,11 +41,22 @@ impl Config {
             reader.read_to_end(&mut buffer).ok()?;
             match format {
                 FileFormat::TOML => toml::from_slice(buffer.as_slice()).ok(),
-                FileFormat::JSON => serde_json::from_reader(reader).ok()
+                FileFormat::JSON => serde_json::from_reader(reader).ok(),
             }
         } else {
             None
         }
+    }
+    pub fn set<'a, T: Serialize + DeserializeOwned>(path: &str, content: &T, format: FileFormat) -> Result<()> {
+        let path = data().join(path);
+        let mut file = std::fs::File::create(path)?;
+        let content = match format {
+            FileFormat::TOML => toml::to_string(&content)?,
+            FileFormat::JSON => serde_json::to_string(&content)?
+        };
+        file.write(content.as_bytes())?;
+        println!("Settings updated.");
+        Ok(())
     }
     pub fn project(mut self, project: &str) -> Self {
         self.project = project.to_string();
