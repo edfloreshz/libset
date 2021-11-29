@@ -1,5 +1,4 @@
 use libdmd::utils::config::builder::*;
-use libdmd::utils::editor::editor::{Editor, EditorApp};
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
 
@@ -7,7 +6,6 @@ use anyhow::Result;
 pub struct AppOptions {
     pub host: String,
     pub owner: String,
-    pub editor: Editor,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
@@ -19,13 +17,12 @@ fn main() -> Result<()> {
     let options = AppOptions {
         host: "GitHub".to_string(),
         owner: "edfloreshz".to_string(),
-        editor: Editor::new(EditorApp::Vim)
     };
     let mut log = Log {
         message: "Logsd".to_string()
     };
 
-    let config = ConfigBuilder::new()
+    let mut config = ConfigBuilder::new()
         .project("devmode")
         .dir(
             DirectoryBuilder::new()
@@ -34,7 +31,7 @@ fn main() -> Result<()> {
                     FileBuilder::new()
                         .name("config")
                         .format(FileFormat::TOML)
-                        .data(&options),
+                        .data(&options)?,
                 ),
         )
         .dir(
@@ -43,12 +40,10 @@ fn main() -> Result<()> {
                     FileBuilder::new()
                         .name("logs")
                         .format(FileFormat::TOML)
-                        .data(&log),
+                        .data(&log)?,
                 )
         )
-        .dir(DirectoryBuilder::new().name("paths"))
-        .build()
-        .unwrap();
-    log.message = "Updated!".to_string();
-    config.update()
+        .dir(DirectoryBuilder::new().name("paths"));
+    config.build()?;
+    Ok(())
 }

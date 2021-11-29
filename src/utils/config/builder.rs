@@ -6,8 +6,9 @@ use std::{
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-
-use crate::utils::constants::messages::*;
+use core::default::Default;
+use std::fs::read_to_string;
+use crate::data;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigBuilder  {
@@ -21,31 +22,54 @@ impl ConfigBuilder {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn current<'a, T: Serialize + Deserialize<'a> + Default>(&self, path: &str) -> Option<String> {
+        let path = data().join("app.json");
+        if path.exists() {
+            return read_to_string(&path).ok();
+        }
+        None
+    }
+    fn parse<'a, T: Serialize + Deserialize<'a> + Default>(content: &'a str, file: FileBuilder) -> Option<T> {
+        match file.format {
+            FileFormat::TOML => toml::from_str(content).ok(),
+            FileFormat::JSON => serde_json::from_str(content).ok()
+        }
+    }
     pub fn project(mut self, project: &str) -> Self {
         self.project = project.to_string();
-        let root = DirectoryBuilder::new().path(crate::data().join(&self.project));
+        let root = DirectoryBuilder::new().path(crate::data().join(project));
         self.root = root.clone();
-        self.dir(root);
+        self.dir(root.clone());
         self
     }
     pub fn dir(&mut self, mut dir: DirectoryBuilder) -> Self {
         dir.parent(self.root.path.clone().into());
         for file in &mut dir.files {
-            file.parent(PathBuf::from(self.root.path.clone()).join(&file.name));
+            file.parent(&mut dir.path);
         }
         self.dirs.push(dir);
         self.clone()
     }
-    pub fn build(self) -> Result<Self> {
+    pub fn file(&mut self, mut file: FileBuilder) -> Self {
+        file.parent(&mut self.root.path.clone().into());
+        self.files.push(file);
+        self.clone()
+    }
+    pub fn build(&mut self) -> Result<Self> {
+        let config = FileBuilder::new()
+            .name("app")
+            .format(FileFormat::JSON)
+            .data(self)?;
+        self.file(config);
         for dir in &self.dirs {
             dir.build()?;
         }
         for file in &self.files {
             file.build()?;
         }
-        Ok(self)
+        Ok(self.clone())
     }
-    pub fn update(self) -> Result<()> {
+    pub fn update(mut self) -> Result<()> {
         self.build()?;
         println!("Update successful");
         Ok(())
@@ -91,8 +115,9 @@ impl DirectoryBuilder {
         self.dirs.push(dir);
         self
     }
+    /// Add a file to DirectoryBuilder.
     pub fn file(&mut self, mut file: FileBuilder) -> Self {
-        file.parent(self.path.clone());
+        file.parent(&mut self.path.clone());
         self.files.push(file);
         self.clone()
     }
@@ -108,9 +133,7 @@ impl DirectoryBuilder {
             }
         }
         for file in &self.files {
-            if file.current().is_some() && file.current() != file.data {
-                file.build()?;
-            }
+            file.build()?;
         }
         Ok(())
     }
@@ -132,6 +155,9 @@ impl FileBuilder {
         self.name = name.to_string();
         self
     }
+    pub fn get_name(&self) -> String {
+        self.format.ext(&*self.name)
+    }
     pub fn current(&self) -> Option<String> {
         std::fs::read_to_string(self.path.clone()).ok()
     }
@@ -139,10 +165,10 @@ impl FileBuilder {
         self.format = format;
         self
     }
-    pub fn parent(&mut self, path: PathBuf) -> Self {
-        let mut path = path;
-        path.push(Path::new(&self.format.ext(self.name.as_str())));
-        self.path = path.to_path_buf();
+    /// Set parent to FileBuilder.
+    pub fn parent(&mut self, path: &mut PathBuf) -> Self {
+        let path = path.join(self.get_name().as_str()); //TODO: No se modifica
+        self.path = path.clone();
         self.clone()
     }
     pub fn path(mut self, path: &mut PathBuf) -> Self {
@@ -151,22 +177,22 @@ impl FileBuilder {
         self.path = path.to_path_buf();
         self
     }
-    pub fn data<T: Serialize + Default + Clone>(mut self, data: &T) -> Self {
+    pub fn data<T: Serialize + Default + Clone>(mut self, data: &T) -> Result<Self> {
         let data = match self.format {
-            FileFormat::TOML => toml::to_string(&data).unwrap(),
-            FileFormat::JSON => serde_json::to_string(&data).unwrap()
+            FileFormat::TOML => toml::to_string(&data)?,
+            FileFormat::JSON => serde_json::to_string(&data)?
         };
         self.data = Some(data);
-        self
+        Ok(self)
     }
     pub fn write(&self) -> Result<()> {
         if self.data.is_none() {
             return Ok(());
         }
         File::create(&self.path)
-            .with_context(|| failed_to("open", &*self.name))?
+            .with_context(|| "Failed to create file.")?
             .write_all(self.data.as_ref().unwrap().as_bytes())
-            .with_context(|| FAILED_TO_WRITE_CONFIG)?;
+            .with_context(|| "Failed to write to file.")?;
         println!("Wrote to {}", self.path.display());
         Ok(())
     }
