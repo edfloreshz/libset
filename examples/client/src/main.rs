@@ -1,9 +1,10 @@
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
-use libdmd::utils::config::config::ConfigBuilder;
-use libdmd::utils::config::directory::DirectoryBuilder;
-use libdmd::utils::config::file::FileBuilder;
+use libdmd::utils::config::config::Config;
+use libdmd::utils::config::directory::Directory;
+use libdmd::utils::config::file::File;
 use libdmd::utils::config::format::FileFormat;
+use libdmd::utils::config::format::FileFormat::TOML;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
 pub struct AppOptions {
@@ -25,28 +26,30 @@ fn main() -> Result<()> {
         message: "Logs".to_string()
     };
 
-    let mut config = ConfigBuilder::new()
+    let mut config = Config::new()
         .project("devmode")
         .dir(
-            DirectoryBuilder::new()
+            Directory::new()
                 .name("config")
                 .file(
-                    FileBuilder::new()
+                    File::new()
                         .name("config")
                         .format(FileFormat::TOML)
                         .data(&options)?,
                 ),
         )
         .dir(
-            DirectoryBuilder::new().name("logs")
+            Directory::new().name("logs")
                 .file(
-                    FileBuilder::new()
+                    File::new()
                         .name("logs")
                         .format(FileFormat::TOML)
                         .data(&log)?,
                 )
         )
-        .dir(DirectoryBuilder::new().name("paths"));
+        .dir(Directory::new().name("paths"));
     config.build()?;
+    println!("{:?}", config.current());
+    println!("{:?}", Config::get::<Log>("devmode/logs/logs.toml", TOML));
     Ok(())
 }

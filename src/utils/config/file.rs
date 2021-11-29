@@ -1,5 +1,5 @@
 use std::{
-    fs::{File},
+    fs::{File as SysFile},
     io::Write,
     path::{Path, PathBuf},
 };
@@ -12,16 +12,16 @@ use crate::utils::config::{
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct FileBuilder {
+pub struct File {
     name: String,
     path: PathBuf,
     data: Option<String>,
     pub format: FileFormat,
 }
 
-impl FileBuilder {
+impl File {
     pub fn new() -> Self {
-        FileBuilder::default()
+        File::default()
     }
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_string();
@@ -61,7 +61,7 @@ impl FileBuilder {
         if self.data.is_none() {
             return Ok(());
         }
-        File::create(&self.path)
+        SysFile::create(&self.path)
             .with_context(|| "Failed to create file.")?
             .write_all(self.data.as_ref().unwrap().as_bytes())
             .with_context(|| "Failed to write to file.")?;
@@ -69,7 +69,7 @@ impl FileBuilder {
         Ok(())
     }
     pub fn build(&self) -> Result<()> {
-        File::create(&self.path).with_context(|| "Failed to create file.")?;
+        SysFile::create(&self.path).with_context(|| "Failed to create file.")?;
         if self.data.is_some() {
             self.write()?;
         }

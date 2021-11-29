@@ -11,17 +11,17 @@ use crate::utils::config::{
 };
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct DirectoryBuilder {
+pub struct Directory {
     pub name: String,
     pub path: PathBuf,
     pub recursive: bool,
-    pub dirs: Vec<DirectoryBuilder>,
-    pub files: Vec<FileBuilder>
+    pub dirs: Vec<Directory>,
+    pub files: Vec<File>
 }
 
-impl DirectoryBuilder {
+impl Directory {
     pub fn new() -> Self {
-        DirectoryBuilder::default()
+        Directory::default()
     }
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_string();
@@ -41,12 +41,12 @@ impl DirectoryBuilder {
         self.recursive = recursive;
         self
     }
-    pub fn dir(mut self, dir: DirectoryBuilder) -> Self {
+    pub fn dir(mut self, dir: Directory) -> Self {
         self.dirs.push(dir);
         self
     }
     /// Add a file to DirectoryBuilder.
-    pub fn file(&mut self, mut file: FileBuilder) -> Self {
+    pub fn file(&mut self, mut file: File) -> Self {
         file.parent(&mut self.path.clone());
         self.files.push(file);
         self.clone()
