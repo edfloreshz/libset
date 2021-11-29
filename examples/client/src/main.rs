@@ -1,6 +1,9 @@
-use libdmd::utils::config::builder::*;
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
+use libdmd::utils::config::config::ConfigBuilder;
+use libdmd::utils::config::directory::DirectoryBuilder;
+use libdmd::utils::config::file::FileBuilder;
+use libdmd::utils::config::format::FileFormat;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
 pub struct AppOptions {
@@ -18,8 +21,8 @@ fn main() -> Result<()> {
         host: "GitHub".to_string(),
         owner: "edfloreshz".to_string(),
     };
-    let mut log = Log {
-        message: "Logsd".to_string()
+    let log = Log {
+        message: "Logs".to_string()
     };
 
     let mut config = ConfigBuilder::new()
