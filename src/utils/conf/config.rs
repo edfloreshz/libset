@@ -43,21 +43,47 @@ impl<'a> Config<'a> {
         data().join(self.name)
     }
     pub fn add(&mut self, mut element: Element<'a>) -> Self {
-        element.path = self.path().join(element.name);
+        if element.name == "" {
+            element.path(data().join(self.name));
+            element.name = self.name
+        } else {
+            element.path(self.path());
+        }
         for mut child in &mut element.children {
-            child.path = element.path.join(child.name)
+            child.path(element.path.clone());
+            Config::fill_paths(&mut child);
         }
         self.elements.push(element);
         self.clone()
     }
-    pub fn write(self) -> Result<Self> {
-        for element in &self.elements {
-            element.write()?;
-            for child in &element.children {
-                child.write()?;
+
+    fn fill_paths(element: &mut Element) {
+        for mut child in &mut element.children {
+            child.path(element.path.clone());
+            if !child.children.is_empty() {
+                Config::fill_paths(&mut child)
+            } else {
+                continue;
             }
         }
+    }
+    pub fn write(self) -> Result<Self> {
+        for child in &self.elements {
+            Config::write_recursive(child)?;
+        }
         Ok(self.clone())
+    }
+    fn write_recursive(element: &Element) -> Result<()> {
+        element.write()?;
+        for child in &element.children {
+            child.write()?;
+            if !child.children.is_empty() {
+                Config::write_recursive(&child)?;
+            } else {
+                continue;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -82,6 +108,10 @@ impl<'a> Element<'a> {
         self.format = format;
         self
     }
+    fn path(&mut self, path: PathBuf) -> PathBuf {
+        self.path = path.join(self.name);
+        path
+    }
     pub fn child(mut self, element: Element<'a>) -> Self {
         self.children.push(element);
         self
@@ -93,10 +123,12 @@ impl<'a> Element<'a> {
                     DirBuilder::new()
                         .recursive(false)
                         .create(&self.path)?;
+                    println!("Directory `{}` was written.", self.name)
                 }
             }
             Format::File => {
                 File::create(&self.path).with_context(|| "Failed to create file.")?;
+                println!("File `{}` was written.", self.name)
             }
         }
         Ok(self.clone())
