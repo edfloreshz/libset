@@ -1,14 +1,12 @@
 use std::{
-    fs::{DirBuilder},
+    fs::DirBuilder,
     path::{Path, PathBuf},
 };
 
-use anyhow::{Result};
-use serde::{Deserialize, Serialize};
+use crate::utils::config::file::*;
+use anyhow::Result;
 use core::default::Default;
-use crate::utils::config::{
-    file::*,
-};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Directory {
@@ -16,7 +14,7 @@ pub struct Directory {
     pub path: PathBuf,
     pub recursive: bool,
     pub dirs: Vec<Directory>,
-    pub files: Vec<File>
+    pub files: Vec<File>,
 }
 
 impl Directory {

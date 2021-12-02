@@ -1,22 +1,18 @@
-use anyhow::{Result};
-use serde::{Deserialize, Serialize};
+use crate::data;
+use crate::utils::config::{directory::*, file::*, format::*};
+use anyhow::Result;
 use core::default::Default;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::io::{BufReader, Read, Write};
-use serde::de::DeserializeOwned;
-use crate::data;
-use crate::utils::config::{
-    file::*,
-    format::*,
-    directory::*
-};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     project: String,
     root: Directory,
     dirs: Vec<Directory>,
-    files: Vec<File>
+    files: Vec<File>,
 }
 
 impl Config {
@@ -47,12 +43,16 @@ impl Config {
             None
         }
     }
-    pub fn set<'a, T: Serialize + DeserializeOwned>(path: &str, content: &T, format: FileFormat) -> Result<()> {
+    pub fn set<'a, T: Serialize + DeserializeOwned>(
+        path: &str,
+        content: &T,
+        format: FileFormat,
+    ) -> Result<()> {
         let path = data().join(path);
         let mut file = std::fs::File::create(path)?;
         let content = match format {
             FileFormat::TOML => toml::to_string(&content)?,
-            FileFormat::JSON => serde_json::to_string(&content)?
+            FileFormat::JSON => serde_json::to_string(&content)?,
         };
         file.write(content.as_bytes())?;
         println!("Settings updated.");
@@ -102,8 +102,3 @@ impl Config {
         Ok(())
     }
 }
-
-
-
-
-

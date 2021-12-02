@@ -1,15 +1,13 @@
 use std::{
-    fs::{File as SysFile},
+    fs::File as SysFile,
     io::Write,
     path::{Path, PathBuf},
 };
 
+use crate::utils::config::format::*;
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use core::default::Default;
-use crate::utils::config::{
-    format::*,
-};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct File {
