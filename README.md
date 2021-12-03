@@ -7,7 +7,7 @@
 
 ```
 [dependencies]
-libdmd = "0.1.1"
+libdmd = "0.1.2"
 ```
 
 ## Proposals
