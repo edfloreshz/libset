@@ -38,7 +38,7 @@ impl File {
     /// Set parent to FileBuilder.
     pub fn parent(&mut self, path: &mut PathBuf) -> Self {
         let path = path.join(self.get_name().as_str()); //TODO: No se modifica
-        self.path = path.clone();
+        self.path = path;
         self.clone()
     }
     pub fn path(mut self, path: &mut PathBuf) -> Self {

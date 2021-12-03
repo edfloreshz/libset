@@ -1,5 +1,5 @@
 use anyhow::Result;
-use libdmd::utils::config::config::*;
+use libdmd::utils::config::*;
 
 fn main() -> Result<()> {
     let _config = Config::new()
