@@ -131,7 +131,6 @@ impl Config {
             FileFormat::JSON => serde_json::to_string(&content)?,
         };
         file.write_all(content.as_bytes())?;
-        println!("Settings updated.");
         Ok(())
     }
 }
