@@ -1,34 +1,94 @@
 use crate::data;
-use crate::utils::config::{directory::*, file::*, format::*};
-use anyhow::Result;
-use core::default::Default;
-use serde::de::DeserializeOwned;
+use crate::utils::config::format::FileFormat;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::fs::read_to_string;
+use serde::de::DeserializeOwned;
+use std::fs::{DirBuilder, File};
 use std::io::{BufReader, Read, Write};
+use std::path::PathBuf;
+use crate::utils::config::format::FileFormat::{TOML};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
-    project: String,
-    root: Directory,
-    dirs: Vec<Directory>,
-    files: Vec<File>,
+    name: String,
+    author: String,
+    version: String,
+    about: String,
+    elements: Vec<Element>,
 }
 
 impl Config {
     pub fn new() -> Self {
-        Self::default()
+        Default::default()
     }
-    pub fn current(&self) -> Option<Self> {
-        let path = data().join(format!("{}/app.json", self.project));
-        let contents = if path.exists() {
-            read_to_string(&path).ok()?
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+        self.add(Element::new("").child(Element::new("app.toml").format(Format::File)));
+        self
+    }
+    pub fn author(mut self, author: &str) -> Self {
+        self.author = author.to_string();
+        self
+    }
+    pub fn version(mut self, version: &str) -> Self {
+        self.version = version.to_string();
+        self
+    }
+    pub fn about(mut self, about: &str) -> Self {
+        self.about = about.to_string();
+        self
+    }
+    pub fn path(&self) -> PathBuf {
+        data().join(self.name.to_string())
+    }
+    pub fn add(&mut self, mut element: Element) -> Self {
+        if element.name == "" {
+            element.path(data().join(self.name.to_string()));
+            element.name = self.name.to_string()
         } else {
-            String::new()
-        };
-        serde_json::from_str(&contents).ok()
+            element.path(self.path());
+        }
+        for mut child in &mut element.children {
+            child.path(element.path.clone());
+            Config::fill_paths(&mut child);
+        }
+        self.elements.push(element);
+        self.clone()
     }
-    pub fn get<'a, T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
+    fn fill_paths(element: &mut Element) {
+        for mut child in &mut element.children {
+            child.path(element.path.clone());
+            if !child.children.is_empty() {
+                Config::fill_paths(&mut child)
+            } else {
+                continue;
+            }
+        }
+    }
+    pub fn write(self) -> Result<Self> {
+        for child in &self.elements {
+            Config::write_recursive(child)?;
+        }
+        Config::set(format!("{}/app.toml", self.name).as_str(), self.clone(), TOML)?;
+        Ok(self.clone())
+    }
+    fn write_recursive(element: &Element) -> Result<()> {
+        element.write()?;
+        for child in &element.children {
+            child.write()?;
+            if !child.children.is_empty() {
+                Config::write_recursive(&child)?;
+            } else {
+                continue;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn current() -> Option<Self> {
+        Config::get::<Config>("devmode/app.toml", FileFormat::TOML)
+    }
+    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
         let path = data().join(path);
         if path.exists() {
             let file = std::fs::File::open(path).ok()?;
@@ -36,16 +96,28 @@ impl Config {
             let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer).ok()?;
             match format {
-                FileFormat::TOML => toml::from_slice(buffer.as_slice()).ok(),
-                FileFormat::JSON => serde_json::from_reader(reader).ok(),
+                FileFormat::TOML => {
+                    let res = toml::from_slice(buffer.as_slice());
+                    if let Err(ref e) = res {
+                        println!("TOML: {}", e);
+                    }
+                    res.ok()
+                },
+                FileFormat::JSON => {
+                    let res = serde_json::from_reader(reader);
+                    if let Err(ref e) = res {
+                        println!("JSON: {}", e);
+                    }
+                    res.ok()
+                },
             }
         } else {
             None
         }
     }
-    pub fn set<'a, T: Serialize + DeserializeOwned>(
+    pub fn set<T: Serialize + DeserializeOwned>(
         path: &str,
-        content: &T,
+        content: T,
         format: FileFormat,
     ) -> Result<()> {
         let path = data().join(path);
@@ -58,47 +130,56 @@ impl Config {
         println!("Settings updated.");
         Ok(())
     }
-    pub fn project(mut self, project: &str) -> Self {
-        self.project = project.to_string();
-        let root = Directory::new().path(crate::data().join(project));
-        self.root = root.clone();
-        self.dir(root.clone());
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Element {
+    name: String,
+    path: PathBuf,
+    format: Format,
+    children: Vec<Element>,
+}
+
+impl Element {
+    pub fn new(name: &str) -> Self {
+        Element {
+            name: name.to_string(),
+            path: Default::default(),
+            format: Format::Directory,
+            children: vec![],
+        }
+    }
+    pub fn format(mut self, format: Format) -> Self {
+        self.format = format;
         self
     }
-    pub fn dir(&mut self, mut dir: Directory) -> Self {
-        dir.parent(self.root.path.clone().into());
-        for file in &mut dir.files {
-            file.parent(&mut dir.path);
-        }
-        self.dirs.push(dir);
-        self.clone()
+    fn path(&mut self, path: PathBuf) -> PathBuf {
+        self.path = path.join(self.name.to_string());
+        path
     }
-    pub fn file(&mut self, mut file: File) -> Self {
-        file.parent(&mut self.root.path.clone().into());
-        self.files.push(file);
-        self.clone()
+    pub fn child(mut self, element: Element) -> Self {
+        self.children.push(element);
+        self
     }
-    pub fn build(&mut self) -> Result<Self> {
-        let config = File::new()
-            .name("app")
-            .format(FileFormat::JSON)
-            .data(self)?;
-        self.file(config);
-        for dir in &self.dirs {
-            dir.build()?;
-        }
-        for file in &self.files {
-            file.build()?;
+    pub fn write(&self) -> Result<Self> {
+        match &self.format {
+            Format::Directory => {
+                if !&self.path.exists() {
+                    DirBuilder::new().recursive(false).create(&self.path)?;
+                    println!("Directory `{}` was written.", self.name)
+                }
+            }
+            Format::File => {
+                File::create(&self.path).with_context(|| "Failed to create file.")?;
+                println!("File `{}` was written.", self.name)
+            }
         }
         Ok(self.clone())
     }
-    pub fn update(mut self) -> Result<()> {
-        self.build()?;
-        println!("Update successful");
-        Ok(())
-    }
-    pub fn validate() -> Result<()> {
-        //TODO: Validate structure.
-        Ok(())
-    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Format {
+    Directory,
+    File,
 }
