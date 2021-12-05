@@ -93,9 +93,10 @@ impl Config {
         Config::get::<Config>("devmode/app.toml", FileFormat::TOML)
     }
     pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
-        let path = data().join(path);
-        if path.exists() {
-            let file = std::fs::File::open(path).ok()?;
+        let full_path = data();
+        let full_path = full_path.join(path);
+        if full_path.exists() {
+            let file = std::fs::File::open(full_path).ok()?;
             let mut reader = BufReader::new(file);
             let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer).ok()?;
@@ -124,8 +125,9 @@ impl Config {
         content: T,
         format: FileFormat,
     ) -> Result<()> {
-        let path = data().join(path);
-        let mut file = std::fs::File::create(path)?;
+        let full_path = data();
+        let full_path = full_path.join(path);
+        let mut file = std::fs::File::create(full_path)?;
         let content = match format {
             FileFormat::TOML => toml::to_string(&content)?,
             FileFormat::JSON => serde_json::to_string(&content)?,
