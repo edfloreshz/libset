@@ -1,31 +1,15 @@
 use anyhow::Result;
 use libdmd::utils::config::*;
+use libdmd::{dir, fi};
 
 fn main() -> Result<()> {
-    let _config = Config::new()
-        .name("devmode")
+    let config = Config::new("devmode")
         .author("Eduardo Flores")
         .about("Development management app.")
         .version("0.1.1")
-        .add(
-            Element::new("config")
-                .child(Element::new("config.toml").format(Format::File))
-                .child(
-                    Element::new("user")
-                        .child(Element::new("user.toml").format(Format::File))
-                        .child(
-                            Element::new("edfloreshz")
-                                .child(Element::new("edfloreshz.toml").format(Format::File)),
-                        ),
-                ),
-        )
-        .add(Element::new("logs"))
-        .add(Element::new("paths").child(Element::new("devpaths").format(Format::File)))
-        .write()?;
-    let current = Config::current();
-    match current {
-        None => println!("Could not get current configuration"),
-        Some(current) => println!("{:#?}", current)
-    }
+        .add(dir!("config").child(fi!("config.toml")))
+        .add(dir!("logs"))
+        .add(dir!("paths").child(fi!("devpaths")));
+    println!("{:#?}", config);
     Ok(())
 }
