@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-
-pub mod utils;
-
-pub fn data() -> PathBuf {
-    dirs::data_dir().expect("Data directory not present.")
-}
-
-pub fn home() -> PathBuf {
-    dirs::home_dir().expect("Home directory not present.")
-}
+/// Contains the Config data structure.
+pub mod config;
+/// Contains the Element data structure.
+pub mod element;
+/// Contains the home and data paths.
+pub mod routes;
+/// Contains the ElementFormat and FileType enums.
+pub mod format;
+/// Contains macros to facilitate the creation of new instances.
+mod macros;

@@ -1,15 +1,12 @@
-pub mod format;
-pub mod macros;
-
-use crate::{data, dir, fi};
-use crate::utils::config::format::FileFormat;
-use crate::utils::config::format::FileFormat::TOML;
-use anyhow::{Context, Result};
+use crate::{dir, fi};
+use crate::format::{ElementFormat, FileType};
+use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::fs::{DirBuilder, File};
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
+use crate::element::Element;
+use crate::routes::data;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -20,42 +17,21 @@ pub struct Config {
     elements: Vec<Element>,
 }
 
+/// Config is a data structure that encapsulates the main info about your app.
 impl Config {
     /// Initializes a new configuration for the app.
     ///
-    /// It sets the name and adds the base directory and `app.toml`.
-    /// `app.toml` is the file where the file structure is saved.
+    /// Sets the name for the app, includes the base directory and `app.toml` to Config's children.
+    ///
+    /// The `app.toml` file contains the Config structure represented as TOML.
     ///
     /// Example:
     /// ```rust
-    /// use libdmd::utils::config::Config;
+    /// use libdmd::config::Config;
     /// use anyhow::Result;
     ///
     /// fn main() -> Result<()> {
-    ///     let config = Config::new("app").write()?;
-    /// }
-    /// ```
-    /// Should generate the following structure.
-    /// ```text
-    /// Config {
-    ///     name: "app",
-    ///     author: "",
-    ///     version: "",
-    ///     about: "",
-    ///     elements: [
-    ///         Element {
-    ///             name: "",
-    ///             path: "/home/eduardo/.local/share/app/",
-    ///             format: Directory,
-    ///             children: [],
-    ///         },
-    ///         Element {
-    ///             name: "app.toml",
-    ///             path: "/home/eduardo/.local/share/app/app.toml",
-    ///             format: File,
-    ///             children: [],
-    ///         },
-    ///     ],
+    ///     let config = Config::new("app");
     /// }
     /// ```
     pub fn new(name: &str) -> Self {
@@ -69,25 +45,41 @@ impl Config {
         base.add(dir!("").child(fi!("app.toml")))
     }
     /// Sets the author of the program.
+    ///
+    /// ```rust
+    /// let config = Config::new("app").author("Your Name");
+    /// ```
     pub fn author(mut self, author: &str) -> Self {
         self.author = author.to_string();
         self
     }
     /// Sets the version of the program.
+    ///
+    /// ```rust
+    /// let config = Config::new("app").version("0.1.1");
+    /// ```
     pub fn version(mut self, version: &str) -> Self {
         self.version = version.to_string();
         self
     }
     /// Sets the information about the program.
+    ///
+    /// ```rust
+    /// let config = Config::new("app").about("This app is just for demonstration.");
+    /// ```
     pub fn about(mut self, about: &str) -> Self {
         self.about = about.to_string();
         self
     }
     /// Returns the base path with the name property joined.
-    pub fn path(&self) -> PathBuf {
+    fn path(&self) -> PathBuf {
         data().join(self.name.to_string())
     }
     /// Adds an element to the child
+    ///
+    /// ```rust
+    /// let config = Config::new("app").add(dir!("config"));
+    /// ```
     pub fn add(&mut self, mut element: Element) -> Self {
         // Set path for element
         element.set_path(self.path());
@@ -106,6 +98,7 @@ impl Config {
         }
         self.clone()
     }
+    /// Fills the path for all the children inside an Element.
     fn fill_paths(element: &mut Element) {
         for child in &mut element.children {
             child.set_path(element.path.clone());
@@ -114,6 +107,11 @@ impl Config {
             }
         }
     }
+    /// Writes the current layout to the filesystem.
+    ///
+    /// ```rust
+    /// let config = Config::new("app").add(dir!("config")).write()?;
+    /// ```
     pub fn write(self) -> Result<Self> {
         for child in &self.elements {
             Config::write_recursive(child)?;
@@ -121,10 +119,11 @@ impl Config {
         Config::set(
             format!("{}/app.toml", self.name).as_str(),
             self.clone(),
-            TOML,
+            FileType::TOML,
         )?;
         Ok(self)
     }
+    /// Recursively writes every children inside the structure to the filesystem.
     fn write_recursive(element: &Element) -> Result<()> {
         element.write()?;
         for child in &element.children {
@@ -139,9 +138,9 @@ impl Config {
     }
 
     pub fn current() -> Option<Self> {
-        Config::get::<Config>("devmode/app.toml", FileFormat::TOML)
+        Config::get::<Config>("devmode/app.toml", FileType::TOML)
     }
-    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
+    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileType) -> Option<T> {
         let full_path = data();
         let full_path = full_path.join(path);
         if full_path.exists() {
@@ -150,14 +149,14 @@ impl Config {
             let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer).ok()?;
             match format {
-                FileFormat::TOML => {
+                FileType::TOML => {
                     let res = toml::from_slice(buffer.as_slice());
                     if let Err(ref e) = res {
                         println!("TOML: {}", e);
                     }
                     res.ok()
                 }
-                FileFormat::JSON => {
+                FileType::JSON => {
                     let res = serde_json::from_reader(reader);
                     if let Err(ref e) = res {
                         println!("JSON: {}", e);
@@ -172,69 +171,16 @@ impl Config {
     pub fn set<T: Serialize + DeserializeOwned>(
         path: &str,
         content: T,
-        format: FileFormat,
+        format: FileType,
     ) -> Result<()> {
         let full_path = data();
         let full_path = full_path.join(path);
         let mut file = std::fs::File::create(full_path)?;
         let content = match format {
-            FileFormat::TOML => toml::to_string(&content)?,
-            FileFormat::JSON => serde_json::to_string(&content)?,
+            FileType::TOML => toml::to_string(&content)?,
+            FileType::JSON => serde_json::to_string(&content)?,
         };
         file.write_all(content.as_bytes())?;
         Ok(())
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Element {
-    name: String,
-    path: PathBuf,
-    format: Format,
-    children: Vec<Element>,
-}
-
-impl Element {
-    pub fn new(name: &str) -> Self {
-        Element {
-            name: name.to_string(),
-            path: Default::default(),
-            format: Format::Directory,
-            children: vec![],
-        }
-    }
-    pub fn format(mut self, format: Format) -> Self {
-        self.format = format;
-        self
-    }
-    fn set_path(&mut self, path: PathBuf) -> Self {
-        self.path = path.join(self.name.to_string());
-        self.clone()
-    }
-    pub fn child(mut self, element: Element) -> Self {
-        self.children.push(element);
-        self
-    }
-    pub fn write(&self) -> Result<Self> {
-        match &self.format {
-            Format::Directory => {
-                if !&self.path.exists() {
-                    DirBuilder::new().recursive(false).create(&self.path)?;
-                    println!("Directory `{}` was written.", self.name)
-                }
-            }
-            Format::File => {
-                File::create(&self.path).with_context(|| "Failed to create file.")?;
-                println!("File `{}` was written.", self.name)
-            }
-        }
-        Ok(self.clone())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Format {
-    Directory,
-    File,
-}
-

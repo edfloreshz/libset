@@ -1,6 +1,8 @@
 use anyhow::Result;
-use libdmd::utils::config::*;
+use libdmd::config::*;
+use libdmd::element::*;
 use libdmd::{dir, fi};
+use libdmd::format::ElementFormat;
 
 fn main() -> Result<()> {
     let config = Config::new("devmode")
