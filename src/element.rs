@@ -38,12 +38,10 @@ impl Element {
             ElementFormat::Directory => {
                 if !&self.path.exists() {
                     DirBuilder::new().recursive(false).create(&self.path)?;
-                    println!("Directory `{}` was written.", self.name)
                 }
             }
             ElementFormat::File => {
                 File::create(&self.path).with_context(|| "Failed to create file.")?;
-                println!("File `{}` was written.", self.name)
             }
         }
         Ok(self.clone())

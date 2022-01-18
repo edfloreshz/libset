@@ -151,16 +151,10 @@ impl Config {
             match format {
                 FileType::TOML => {
                     let res = toml::from_slice(buffer.as_slice());
-                    if let Err(ref e) = res {
-                        println!("TOML: {}", e);
-                    }
                     res.ok()
                 }
                 FileType::JSON => {
                     let res = serde_json::from_reader(reader);
-                    if let Err(ref e) = res {
-                        println!("JSON: {}", e);
-                    }
                     res.ok()
                 }
             }
