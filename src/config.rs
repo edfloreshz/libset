@@ -1,12 +1,12 @@
-use crate::{dir, fi};
-use crate::format::{ElementFormat, FileType};
+use crate::element::Element;
+use crate::format::FileType;
+use crate::routes::data;
+use crate::{directory, fi};
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
-use crate::element::Element;
-use crate::routes::data;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -32,6 +32,7 @@ impl Config {
     ///
     /// fn main() -> Result<()> {
     ///     let config = Config::new("app");
+    ///     Ok(())
     /// }
     /// ```
     pub fn new(name: &str) -> Self {
@@ -40,13 +41,15 @@ impl Config {
             author: "".to_string(),
             version: "".to_string(),
             about: "".to_string(),
-            elements: vec![]
+            elements: vec![],
         };
-        base.add(dir!("").child(fi!("app.toml")))
+        base.add(directory!("").child(fi!("app.toml")))
     }
     /// Sets the author of the program.
     ///
     /// ```rust
+    /// use libdmd::config::Config;
+    ///
     /// let config = Config::new("app").author("Your Name");
     /// ```
     pub fn author(mut self, author: &str) -> Self {
@@ -56,6 +59,8 @@ impl Config {
     /// Sets the version of the program.
     ///
     /// ```rust
+    /// use libdmd::config::Config;
+    ///
     /// let config = Config::new("app").version("0.1.1");
     /// ```
     pub fn version(mut self, version: &str) -> Self {
@@ -65,6 +70,8 @@ impl Config {
     /// Sets the information about the program.
     ///
     /// ```rust
+    /// use libdmd::config::Config;
+    ///
     /// let config = Config::new("app").about("This app is just for demonstration.");
     /// ```
     pub fn about(mut self, about: &str) -> Self {
@@ -73,12 +80,15 @@ impl Config {
     }
     /// Returns the base path with the name property joined.
     fn path(&self) -> PathBuf {
-        data().join(self.name.to_string())
+        data().join(&self.name)
     }
     /// Adds an element to the child
     ///
     /// ```rust
-    /// let config = Config::new("app").add(dir!("config"));
+    /// use libdmd::config::Config;
+    /// use libdmd::directory;
+    ///
+    /// let config = Config::new("app").add(directory!("config"));
     /// ```
     pub fn add(&mut self, mut element: Element) -> Self {
         // Set path for element
@@ -90,7 +100,11 @@ impl Config {
         }
         // Base directory
         if self.elements.get(0).is_some() {
-            self.elements.get_mut(0).unwrap().children.push(element.clone());
+            self.elements
+                .get_mut(0)
+                .unwrap()
+                .children
+                .push(element.clone());
         }
         if self.elements.is_empty() {
             element.name = self.clone().name;
@@ -110,7 +124,13 @@ impl Config {
     /// Writes the current layout to the filesystem.
     ///
     /// ```rust
-    /// let config = Config::new("app").add(dir!("config")).write()?;
+    /// use libdmd::config::Config;
+    /// use libdmd::directory;
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let config = Config::new("app").add(directory!("config")).write()?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn write(self) -> Result<Self> {
         for child in &self.elements {
@@ -135,6 +155,14 @@ impl Config {
             }
         }
         Ok(())
+    }
+
+    pub fn is_written(&self) -> bool {
+        Config::get::<Config>(
+            format!("{}/app.toml", &self.name).as_str(),
+            FileType::TOML,
+        )
+        .is_some()
     }
 
     pub fn current() -> Option<Self> {

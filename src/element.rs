@@ -1,10 +1,15 @@
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::fs::{DirBuilder, File};
 use std::path::PathBuf;
-use anyhow::{Context, Result};
-use serde::{Serialize, Deserialize};
-use crate::format::ElementFormat;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ElementFormat {
+    Directory,
+    File,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Element {
     pub(crate) name: String,
     pub(crate) path: PathBuf,
@@ -26,7 +31,7 @@ impl Element {
         self
     }
     pub(crate) fn set_path(&mut self, path: PathBuf) -> Self {
-        self.path = path.join(self.name.to_string());
+        self.path = path.join(&self.name);
         self.clone()
     }
     pub fn child(mut self, element: Element) -> Self {
@@ -47,4 +52,3 @@ impl Element {
         Ok(self.clone())
     }
 }
-

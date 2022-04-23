@@ -1,17 +1,15 @@
 use anyhow::Result;
-use libdmd::config::*;
-use libdmd::element::*;
-use libdmd::{dir, fi};
-use libdmd::format::ElementFormat;
+use libdmd::config::Config;
+use libdmd::{directory, fi};
 
 fn main() -> Result<()> {
     let config = Config::new("devmode")
         .author("Eduardo Flores")
         .about("Development management app.")
         .version("0.1.1")
-        .add(dir!("config").child(fi!("config.toml")))
-        .add(dir!("logs"))
-        .add(dir!("paths").child(fi!("devpaths")));
+        .add(directory!("config").child(fi!("config.toml")))
+        .add(directory!("logs"))
+        .add(directory!("paths").child(fi!("devpaths")));
     println!("{:#?}", config);
     Ok(())
 }
