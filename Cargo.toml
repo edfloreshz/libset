@@ -1,12 +1,12 @@
 [package]
-name = "libdmd"
-version = "0.1.6"
+name = "libset"
+version = "0.1.1"
 edition = "2021"
 license = "GPL-2.0"
-description = "This library can be used to build clients for Devmode."
-homepage = "https://devmode.edfloreshz.dev/"
-documentation = "https://docs.rs/libdmd"
-repository = "https://github.com/edfloreshz/libdmd/"
+description = " Libset is a library that allows Rust applications to easily manage their configuration files."
+homepage = "https://libset.edfloreshz.dev/"
+documentation = "https://docs.rs/libset"
+repository = "https://github.com/edfloreshz/libset/"
 readme = "README.md"
 exclude = [
     ".idea",

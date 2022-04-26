@@ -1,4 +1,4 @@
-/// Contains the Config data structure.
+/// This is where the Config data structure lives, most of that you do will be thanks to this struct.
 pub mod config;
 /// Contains the Element data structure.
 pub mod element;

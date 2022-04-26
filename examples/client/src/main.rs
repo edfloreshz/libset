@@ -1,15 +1,15 @@
 use anyhow::Result;
-use libdmd::config::Config;
-use libdmd::{directory, fi};
+use libset::config::Config;
+use libset::{directory, fi};
 
 fn main() -> Result<()> {
     let config = Config::new("devmode")
         .author("Eduardo Flores")
         .about("Development management app.")
         .version("0.1.1")
-        .add(directory!("config").child(fi!("config.toml")))
+        .add(directory!("config").add_child(fi!("config.toml")))
         .add(directory!("logs"))
-        .add(directory!("paths").child(fi!("devpaths")));
+        .add(directory!("paths").add_child(fi!("devpaths")));
     println!("{:#?}", config);
     Ok(())
 }

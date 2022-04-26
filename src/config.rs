@@ -1,23 +1,29 @@
 use crate::element::Element;
-use crate::format::FileType;
+use crate::format::FileFormat;
 use crate::routes::data;
 use crate::{directory, fi};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 
+/// Stores information about the app and the file structure.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
-    name: String,
-    author: String,
-    version: String,
-    about: String,
-    elements: Vec<Element>,
+    /// Application name.
+    pub name: String,
+    /// Application author.
+    pub author: String,
+    /// Application version.
+    pub version: String,
+    /// Application information.
+    pub about: String,
+    /// File structure of the application.
+    pub elements: Vec<Element>,
 }
 
-/// Config is a data structure that encapsulates the main info about your app.
+/// Config is a data structure that encapsulates the most important information about your application.
 impl Config {
     /// Initializes a new configuration for the app.
     ///
@@ -27,11 +33,11 @@ impl Config {
     ///
     /// Example:
     /// ```rust
-    /// use libdmd::config::Config;
+    /// use libset::config::Config;
     /// use anyhow::Result;
     ///
     /// fn main() -> Result<()> {
-    ///     let config = Config::new("app");
+    ///     let config: Config = Config::new("app");
     ///     Ok(())
     /// }
     /// ```
@@ -43,14 +49,14 @@ impl Config {
             about: "".to_string(),
             elements: vec![],
         };
-        base.add(directory!("").child(fi!("app.toml")))
+        base.add(directory!("").add_child(fi!("app.toml")))
     }
     /// Sets the author of the program.
     ///
     /// ```rust
-    /// use libdmd::config::Config;
+    /// use libset::config::Config;
     ///
-    /// let config = Config::new("app").author("Your Name");
+    /// let config: Config = Config::new("app").author("Your Name");
     /// ```
     pub fn author(mut self, author: &str) -> Self {
         self.author = author.to_string();
@@ -59,9 +65,9 @@ impl Config {
     /// Sets the version of the program.
     ///
     /// ```rust
-    /// use libdmd::config::Config;
+    /// use libset::config::Config;
     ///
-    /// let config = Config::new("app").version("0.1.1");
+    /// let config: Config = Config::new("app").version("0.1.1");
     /// ```
     pub fn version(mut self, version: &str) -> Self {
         self.version = version.to_string();
@@ -70,9 +76,9 @@ impl Config {
     /// Sets the information about the program.
     ///
     /// ```rust
-    /// use libdmd::config::Config;
+    /// use libset::config::Config;
     ///
-    /// let config = Config::new("app").about("This app is just for demonstration.");
+    /// let config: Config = Config::new("app").about("This app is just for demonstration.");
     /// ```
     pub fn about(mut self, about: &str) -> Self {
         self.about = about.to_string();
@@ -85,10 +91,10 @@ impl Config {
     /// Adds an element to the child
     ///
     /// ```rust
-    /// use libdmd::config::Config;
-    /// use libdmd::directory;
+    /// use libset::config::Config;
+    /// use libset::directory;
     ///
-    /// let config = Config::new("app").add(directory!("config"));
+    /// let config: Config = Config::new("app").add(directory!("config"));
     /// ```
     pub fn add(&mut self, mut element: Element) -> Self {
         // Set path for element
@@ -124,24 +130,24 @@ impl Config {
     /// Writes the current layout to the filesystem.
     ///
     /// ```rust
-    /// use libdmd::config::Config;
-    /// use libdmd::directory;
+    /// use libset::config::Config;
+    /// use libset::directory;
     ///
     /// fn main() -> anyhow::Result<()> {
-    ///     let config = Config::new("app").add(directory!("config")).write()?;
+    ///     let config: Config = Config::new("app").add(directory!("config")).write()?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn write(self) -> Result<Self> {
+    pub fn write(&self) -> Result<Self> {
         for child in &self.elements {
             Config::write_recursive(child)?;
         }
         Config::set(
             format!("{}/app.toml", self.name).as_str(),
             self.clone(),
-            FileType::TOML,
+            FileFormat::TOML,
         )?;
-        Ok(self)
+        Ok(self.clone())
     }
     /// Recursively writes every children inside the structure to the filesystem.
     fn write_recursive(element: &Element) -> Result<()> {
@@ -157,18 +163,62 @@ impl Config {
         Ok(())
     }
 
+    /// Determines if the current configuration object has already been written to the filesystem.
+    /// ```
+    /// use libset::config::Config;
+    /// use libset::directory;
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let config: Config = Config::new("app");
+    ///     config.clear(); // Clear any previous configuration.
+    ///     assert_eq!(config.is_written(), false);
+    ///     config.write()?;
+    ///     assert_eq!(config.is_written(), true);
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn is_written(&self) -> bool {
-        Config::get::<Config>(
-            format!("{}/app.toml", &self.name).as_str(),
-            FileType::TOML,
-        )
-        .is_some()
+        Config::current(&self.name).is_some()
+    }
+    /// Clears any current configuration files and directories.
+    /// ```
+    /// use libset::config::Config;
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let config: Config = Config::new("app");
+    ///     config.clear()
+    /// }
+    /// ```
+    pub fn clear(&self) -> anyhow::Result<()> {
+        let app = self
+            .elements
+            .get(0)
+            .with_context(|| "Unable to get root item.")?;
+        std::fs::remove_dir_all(&app.path)?;
+        Ok(())
     }
 
-    pub fn current() -> Option<Self> {
-        Config::get::<Config>("devmode/app.toml", FileType::TOML)
+    /// Get the current Config structure from the app name.
+    ///
+    /// ```
+    /// use libset::config::Config;
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let config: Option<Config> = Config::current("app");
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn current(name: &str) -> Option<Self> {
+        Config::get::<Config>(&format!("{}/app.toml", name), FileFormat::TOML)
     }
-    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileType) -> Option<T> {
+    /// Get a file from a relative path to the app's configuration directory.
+    /// ```
+    /// use libset::config::Config;
+    /// use libset::format::FileFormat;
+    ///
+    /// let config: Option<Config> = Config::get::<Config>("app/app.toml", FileFormat::TOML);
+    /// ```
+    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
         let full_path = data();
         let full_path = full_path.join(path);
         if full_path.exists() {
@@ -177,11 +227,11 @@ impl Config {
             let mut buffer = Vec::new();
             reader.read_to_end(&mut buffer).ok()?;
             match format {
-                FileType::TOML => {
+                FileFormat::TOML => {
                     let res = toml::from_slice(buffer.as_slice());
                     res.ok()
                 }
-                FileType::JSON => {
+                FileFormat::JSON => {
                     let res = serde_json::from_reader(reader);
                     res.ok()
                 }
@@ -190,17 +240,36 @@ impl Config {
             None
         }
     }
+    /// Set a file from a relative path to the app's configuration directory.
+    /// ```
+    /// use libset::config::Config;
+    /// use libset::format::FileFormat;
+    /// use libset::fi;
+    /// use serde::{Serialize, Deserialize};
+    ///
+    /// #[derive(Serialize, Deserialize)]
+    /// struct Settings {
+    ///     dark_mode_enabled: bool
+    /// }
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let settings = Settings { dark_mode_enabled: true };
+    ///     Config::new("app").add(fi!("settings.toml")).write()?;
+    ///     let config = Config::set::<Settings>("app/settings.toml", settings, FileFormat::TOML)?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn set<T: Serialize + DeserializeOwned>(
         path: &str,
         content: T,
-        format: FileType,
+        format: FileFormat,
     ) -> Result<()> {
         let full_path = data();
         let full_path = full_path.join(path);
         let mut file = std::fs::File::create(full_path)?;
         let content = match format {
-            FileType::TOML => toml::to_string(&content)?,
-            FileType::JSON => serde_json::to_string(&content)?,
+            FileFormat::TOML => toml::to_string(&content)?,
+            FileFormat::JSON => serde_json::to_string(&content)?,
         };
         file.write_all(content.as_bytes())?;
         Ok(())
