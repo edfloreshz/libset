@@ -85,7 +85,7 @@ impl Element {
         match &self.format {
             ElementType::Directory => {
                 if !&self.path.exists() {
-                    DirBuilder::new().recursive(false).create(&self.path)?;
+                    DirBuilder::new().recursive(true).create(&self.path)?;
                 }
             }
             ElementType::File => {
