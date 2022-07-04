@@ -1,15 +1,15 @@
 use crate::element::Element;
 use crate::format::FileFormat;
 use crate::routes::data;
-use crate::{directory, fi};
+use crate::{new_dir, new_file};
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 
 /// Stores information about the app and the file structure.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct Config {
     /// Application name.
     pub name: String,
@@ -49,7 +49,7 @@ impl Config {
             about: "".to_string(),
             elements: vec![],
         };
-        base.add(directory!("").add_child(fi!("app.toml")))
+        base.add(new_dir!("").add_child(new_file!("app.toml")))
     }
     /// Sets the author of the program.
     ///
@@ -92,26 +92,31 @@ impl Config {
     ///
     /// ```rust
     /// use libset::config::Config;
-    /// use libset::directory;
+    /// use libset::new_dir;
     ///
-    /// let config: Config = Config::new("app").add(directory!("config"));
+    /// let config: Config = Config::new("app").add(new_dir!("config"));
     /// ```
     pub fn add(&mut self, mut element: Element) -> Self {
         // Set path for element
-        element.set_path(self.path());
-        // Set path for child elements.
-        for child in &mut element.children {
-            child.set_path(element.path.clone());
-            Config::fill_paths(child);
+        element.set_path(&self.path());
+        // Set paths for children of this directory.
+        if let Some(children) = &mut element.children {
+            for child in children {
+                child.set_path(&element.path.clone());
+                Config::fill_paths(child);
+            }
         }
         // Base directory
         if self.elements.get(0).is_some() {
-            self.elements
-                .get_mut(0)
-                .unwrap()
-                .children
-                .push(element.clone());
+            let base = self.elements.get_mut(0).unwrap();
+            if base.children.is_none() {
+                base.children = Some(vec![]);
+            }
+            if let Some(children) = &mut base.children {
+                children.push(element.clone());
+            }
         }
+        // If this is the first add, insert the base directory.
         if self.elements.is_empty() {
             element.name = self.clone().name;
             self.elements.push(element)
@@ -120,10 +125,14 @@ impl Config {
     }
     /// Fills the path for all the children inside an Element.
     fn fill_paths(element: &mut Element) {
-        for child in &mut element.children {
-            child.set_path(element.path.clone());
-            if !child.children.is_empty() {
-                Config::fill_paths(child)
+        if let Some(children) = &mut element.children {
+            for child in children {
+                child.set_path(&element.path.clone());
+                if let Some(children) = &mut child.children {
+                    if !children.is_empty() {
+                        Config::fill_paths(child)
+                    }
+                }
             }
         }
     }
@@ -131,10 +140,10 @@ impl Config {
     ///
     /// ```rust
     /// use libset::config::Config;
-    /// use libset::directory;
+    /// use libset::new_dir;
     ///
     /// fn main() -> anyhow::Result<()> {
-    ///     let config: Config = Config::new("app").add(directory!("config")).write()?;
+    ///     let config: Config = Config::new("app").add(new_dir!("config")).write()?;
     ///     Ok(())
     /// }
     /// ```
@@ -152,12 +161,16 @@ impl Config {
     /// Recursively writes every children inside the structure to the filesystem.
     fn write_recursive(element: &Element) -> Result<()> {
         element.write()?;
-        for child in &element.children {
-            child.write()?;
-            if !child.children.is_empty() {
-                Config::write_recursive(child)?;
-            } else {
-                continue;
+        if let Some(children) = &element.children {
+            for child in children {
+                child.write()?;
+                if let Some(children) = &child.children {
+                    if !children.is_empty() {
+                        Config::write_recursive(child)?;
+                    } else {
+                        continue;
+                    }
+                }
             }
         }
         Ok(())
@@ -166,7 +179,7 @@ impl Config {
     /// Determines if the current configuration object has already been written to the filesystem.
     /// ```
     /// use libset::config::Config;
-    /// use libset::directory;
+    /// use libset::new_dir;
     ///
     /// fn main() -> anyhow::Result<()> {
     ///     let config: Config = Config::new("app");
@@ -177,9 +190,9 @@ impl Config {
     ///     Ok(())
     /// }
     /// ```
-    pub fn is_written(&self) -> bool {
-        Config::current(&self.name).is_some()
-    }
+    // pub fn is_written(&self) -> bool {
+    //     Config::current(&self.name).is_some()
+    // }
     /// Clears any current configuration files and directories.
     /// ```
     /// use libset::config::Config;
@@ -208,9 +221,9 @@ impl Config {
     ///     Ok(())
     /// }
     /// ```
-    pub fn current(name: &str) -> Option<Self> {
-        Config::get::<Config>(&format!("{}/app.toml", name), FileFormat::TOML)
-    }
+    // pub fn current(name: &str) -> Option<Self> {
+    //     Config::get::<Config>(&format!("{}/app.toml", name), FileFormat::TOML)
+    // }
     /// Get a file from a relative path to the app's configuration directory.
     /// ```
     /// use libset::config::Config;
@@ -218,7 +231,7 @@ impl Config {
     ///
     /// let config: Option<Config> = Config::get::<Config>("app/app.toml", FileFormat::TOML);
     /// ```
-    pub fn get<T: Serialize + DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
+    pub fn get<T: DeserializeOwned>(path: &str, format: FileFormat) -> Option<T> {
         let full_path = data();
         let full_path = full_path.join(path);
         if full_path.exists() {
@@ -244,7 +257,7 @@ impl Config {
     /// ```
     /// use libset::config::Config;
     /// use libset::format::FileFormat;
-    /// use libset::fi;
+    /// use libset::new_file;
     /// use serde::{Serialize, Deserialize};
     ///
     /// #[derive(Serialize, Deserialize)]
@@ -254,16 +267,12 @@ impl Config {
     ///
     /// fn main() -> anyhow::Result<()> {
     ///     let settings = Settings { dark_mode_enabled: true };
-    ///     Config::new("app").add(fi!("settings.toml")).write()?;
+    ///     Config::new("app").add(new_file!("settings.toml")).write()?;
     ///     let config = Config::set::<Settings>("app/settings.toml", settings, FileFormat::TOML)?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn set<T: Serialize + DeserializeOwned>(
-        path: &str,
-        content: T,
-        format: FileFormat,
-    ) -> Result<()> {
+    pub fn set<T: Serialize>(path: &str, content: T, format: FileFormat) -> Result<()> {
         let full_path = data();
         let full_path = full_path.join(path);
         let mut file = std::fs::File::create(full_path)?;

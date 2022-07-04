@@ -19,8 +19,5 @@ dirs = "4.0.0"
 toml = "0.5.8"
 serde = { version = "1.0.126", features = ["derive"] }
 serde_json = "1.0.72"
-
-[[example]]
-name = "client"
-crate-type = ["bin"]
-path = "examples/client/src/main.rs"
+erased-serde = "0.3.21"
+dyn-clone = "1.0.6"

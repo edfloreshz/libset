@@ -1,6 +1,6 @@
+use anyhow::Result;
 use libset;
 use libset::config::Config;
-use anyhow::Result;
 
 fn main() -> Result<()> {
     Config::new("devmode")

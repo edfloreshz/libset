@@ -1,12 +1,12 @@
 #[macro_export]
 /// Creates a new Element of type File.
 /// ```
-/// use libset::fi;
+/// use libset::new_file;
 /// use libset::element::Element;
 ///
-/// let dir: Element = fi!("settings");
+/// let dir: Element = new_file!("settings");
 /// ```
-macro_rules! fi {
+macro_rules! new_file {
     ( $x:expr ) => {
         $crate::element::Element::new($x).set_type($crate::element::ElementType::File)
     };
@@ -15,12 +15,12 @@ macro_rules! fi {
 #[macro_export]
 /// Creates a new Element of type Directory.
 /// ```
-/// use libset::directory;
+/// use libset::new_dir;
 /// use libset::element::Element;
 ///
-/// let dir: Element = directory!("settings");
+/// let dir: Element = new_dir!("settings");
 /// ```
-macro_rules! directory {
+macro_rules! new_dir {
     ( $x:expr ) => {
         $crate::element::Element::new($x).set_type($crate::element::ElementType::Directory)
     };
@@ -34,7 +34,7 @@ mod tests {
     fn new_file() {
         assert_eq!(
             Element::new("file").set_type(ElementType::File),
-            fi!("file")
+            new_file!("file")
         )
     }
 
@@ -42,7 +42,7 @@ mod tests {
     fn new_directory() {
         assert_eq!(
             Element::new("directory").set_type(ElementType::Directory),
-            directory!("directory")
+            new_dir!("directory")
         )
     }
 }
