@@ -4,7 +4,7 @@ Libset is a library that allows Rust applications to easily manage their configu
 ## Usage
 ```
 [dependencies]
-libset = "0.1.1"
+libset = "0.1.2"
 ```
 
 ## Proposals
