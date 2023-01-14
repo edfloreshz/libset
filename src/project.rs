@@ -106,8 +106,6 @@ impl Project {
 
             file.read_to_string(&mut buffer)?;
 
-            println!("{}", buffer);
-
             let project: Project = toml::from_str(buffer.as_str())?;
             Ok(project)
         } else {
@@ -276,5 +274,39 @@ impl Project {
             }
         }
         Ok(files)
+    }
+
+    /// Find a file in the project's directory.
+    /// 
+    /// ```rust
+    /// use libset::project::Project;
+    /// use libset::format::FileFormat;
+    /// use libset::new_file;
+    ///
+    /// let project = Project::new("com", "organization", "App").add_files(&[new_file!("testfile")]).unwrap();
+    /// let file = project.get_file("testfile", FileFormat::TOML).unwrap();
+    /// println!("{file:?}");
+    /// ```
+    pub fn get_file(&self, name: &str, format: FileFormat) -> Result<File> {
+        let project =
+            directories::ProjectDirs::from(&self.qualifier, &self.organization, &self.application)
+                .context("Project directory doesn't exist")?;
+        let files: Vec<File> = walkdir::WalkDir::new(project.data_dir())
+            .follow_links(true)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|entry| entry.file_name().to_string_lossy().contains(name) && entry.file_name().to_string_lossy().contains(format.extension()))
+            .map(| file | File {
+                name: file.file_name().to_string_lossy().to_string(),
+                path: file.path().to_path_buf(),
+                format,
+                content: std::fs::read_to_string(file.path()).unwrap(),
+            })
+            .collect();
+        if files.len() == 1 {
+            return Ok(files[0].clone());
+        } else {
+            return Err(anyhow!("Could not find the file"));
+        }
     }
 }

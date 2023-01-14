@@ -14,6 +14,16 @@ pub enum FileFormat {
     JSON,
 }
 
+impl FileFormat {
+    pub fn extension<'a>(&self) -> &'a str {
+        match self {
+            FileFormat::Plain => "",
+            FileFormat::TOML => ".toml",
+            FileFormat::JSON => ".json",
+        }
+    }
+}
+
 impl Default for FileFormat {
     fn default() -> Self {
         Self::TOML

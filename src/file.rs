@@ -102,4 +102,9 @@ impl File {
         std::fs::File::create(&self.path)?.write_all(self.content.as_bytes())?;
         Ok(())
     }
+
+    /// Returns `std::fs::File` from a `File`
+    pub fn open(&self) -> Result<std::fs::File> {
+        Ok(std::fs::File::create(&self.path)?)
+    }
 }
