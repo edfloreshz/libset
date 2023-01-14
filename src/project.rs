@@ -197,8 +197,10 @@ impl Project {
                 FileFormat::JSON => format!("{}.json", file.name),
                 FileFormat::Plain => file.name.clone(),
             };
-            project.place_data_file(&name)?;
-            file.write()?;
+            if !file.path.exists() {
+                project.place_data_file(&name)?;
+                file.write()?;
+            }
         }
         Ok(self)
     }
