@@ -320,4 +320,8 @@ impl Project {
         };
         Ok(value)
     }
+
+    pub fn integrity_ok<T: DeserializeOwned>(&self, name: &str, format: FileFormat) -> bool {
+        self.get_file_as::<T>(name, format).is_ok()
+    }
 }
