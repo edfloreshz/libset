@@ -180,20 +180,22 @@ impl Project {
             directories::ProjectDirs::from(&self.qualifier, &self.organization, &self.application)
                 .context("Project directory doesn't exist.")?;
         
-        let files: Vec<File> = files.iter().map(|f| File {
-            name: f.name.clone(),
-            path: project.data_dir().join(match &f.format {
-                FileFormat::TOML => format!("{}.toml", f.name),
-                FileFormat::JSON => format!("{}.json", f.name),
+        let files: Vec<File> = files.iter().map(|file| File {
+            name: file.name.clone(),
+            path: project.data_dir().join(match &file.format {
+                FileFormat::TOML => format!("{}.toml", file.name),
+                FileFormat::JSON => format!("{}.json", file.name),
+                FileFormat::Plain => file.name.clone(),
             }),
-            format: f.format,
-            content: f.content.clone(),
+            format: file.format,
+            content: file.content.clone(),
         }).collect();
 
         for file in files {
             let name = match &file.format {
                 FileFormat::TOML => format!("{}.toml", file.name),
                 FileFormat::JSON => format!("{}.json", file.name),
+                FileFormat::Plain => file.name.clone(),
             };
             project.place_data_file(&name)?;
             file.write()?;

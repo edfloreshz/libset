@@ -19,6 +19,7 @@ fn main() -> Result<()> {
         .version("0.1.1")
         .add_files(&[
             new_file!("settings").set_format(FileFormat::JSON).set_content(&settings)?,
+            new_file!("settings").set_format(FileFormat::Plain).set_text("testing plain text")?,
         ])?;
     Ok(())
 }

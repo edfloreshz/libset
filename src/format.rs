@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Helper enum to indicate the supported file types.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum FileFormat {
+    Plain,
     /// Tom's Obvious, Minimal Language.
     ///
     /// <https://github.com/toml-lang/toml>

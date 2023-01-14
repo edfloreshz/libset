@@ -82,11 +82,19 @@ impl File {
     /// }
     /// ```
     pub fn set_content<T: Serialize>(&mut self, content: T) -> Result<Self> {
-        let content = match self.format {
-            FileFormat::TOML => toml::to_string(&content)?,
-            FileFormat::JSON => serde_json::to_string(&content)?,
+        match self.format {
+            FileFormat::Plain => (),
+            FileFormat::TOML => self.content = toml::to_string(&content)?,
+            FileFormat::JSON => self.content = serde_json::to_string(&content)?,
         };
-        self.content = content;
+        Ok(self.clone())
+    }
+
+    pub fn set_text(&mut self, content: &str) -> Result<Self> {
+        match self.format {
+            FileFormat::Plain => self.content = content.to_string(),
+            FileFormat::TOML | FileFormat::JSON => () ,
+        };
         Ok(self.clone())
     }
 
