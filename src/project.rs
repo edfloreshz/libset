@@ -2,7 +2,7 @@ use crate::file::File;
 use crate::format::FileFormat;
 use anyhow::{anyhow, Context, Ok, Result};
 use directories::{ProjectDirs, ProjectDirsExt};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
     io::{Read, Write},
     path::PathBuf,
@@ -308,5 +308,16 @@ impl Project {
         } else {
             return Err(anyhow!("Could not find the file"));
         }
+    }
+
+    pub fn get_file_as<T: DeserializeOwned>(&self, name: &str, format: FileFormat) -> Result<T> {
+        let file = self.get_file(name, format)?;
+        let file = std::fs::read_to_string(file.path)?;
+        let value: T = match format {
+            FileFormat::Plain => return Err(anyhow!("Plain text canno't be transformed into a type")),
+            FileFormat::TOML => toml::from_str(file.clone().as_str())?,
+            FileFormat::JSON => serde_json::from_str(file.clone().as_str())?,
+        };
+        Ok(value)
     }
 }
