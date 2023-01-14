@@ -71,13 +71,12 @@ impl File {
     ///     Project::new("com", "organization", "App").add_files(&[new_file!("settings").set_format(FileFormat::TOML)]);
     ///
     ///     let settings = Settings { dark_mode_enabled: true };
-    ///     if let Some(project) = Project::open("com", "organization", "App") {
-    ///         let mut files = project.find("settings")?;
-    ///         if let Some(file) = files.get_mut(0) {
-    ///             file.set_content(settings)?;
-    ///             file.write()?;
-    ///         }        
-    ///     }
+    ///     let project = Project::open("com", "organization", "App")?;
+    ///     let mut files = project.find("settings")?;
+    ///     if let Some(file) = files.get_mut(0) {
+    ///         file.set_content(settings)?;
+    ///         file.write()?;
+    ///     }        
     ///     Ok(())
     /// }
     /// ```
@@ -93,7 +92,7 @@ impl File {
     pub fn set_text(&mut self, content: &str) -> Result<Self> {
         match self.format {
             FileFormat::Plain => self.content = content.to_string(),
-            FileFormat::TOML | FileFormat::JSON => () ,
+            FileFormat::TOML | FileFormat::JSON => (),
         };
         Ok(self.clone())
     }

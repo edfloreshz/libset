@@ -95,17 +95,23 @@ impl Project {
     ///     Ok(())
     /// }
     /// ```
-    pub fn open(qualifier: &str, organization: &str, application: &str) -> Option<Self> {
+    pub fn open(qualifier: &str, organization: &str, application: &str) -> Result<Self> {
         if let Some(project) = ProjectDirs::from(qualifier, organization, application) {
-            let mut f = std::fs::File::open(project.data_dir()).ok()?;
+            let mut file = std::fs::File::open(
+                project
+                    .data_dir()
+                    .join(format!("{qualifier}.{organization}.{application}.toml")),
+            )?;
             let mut buffer = String::new();
 
-            f.read_to_string(&mut buffer).ok()?;
+            file.read_to_string(&mut buffer)?;
 
-            let project: Project = serde_json::from_str(buffer.as_str()).unwrap();
-            Some(project)
+            println!("{}", buffer);
+
+            let project: Project = toml::from_str(buffer.as_str())?;
+            Ok(project)
         } else {
-            None
+            Err(anyhow!("Failed to open project"))
         }
     }
 
@@ -179,17 +185,20 @@ impl Project {
         let project =
             directories::ProjectDirs::from(&self.qualifier, &self.organization, &self.application)
                 .context("Project directory doesn't exist.")?;
-        
-        let files: Vec<File> = files.iter().map(|file| File {
-            name: file.name.clone(),
-            path: project.data_dir().join(match &file.format {
-                FileFormat::TOML => format!("{}.toml", file.name),
-                FileFormat::JSON => format!("{}.json", file.name),
-                FileFormat::Plain => file.name.clone(),
-            }),
-            format: file.format,
-            content: file.content.clone(),
-        }).collect();
+
+        let files: Vec<File> = files
+            .iter()
+            .map(|file| File {
+                name: file.name.clone(),
+                path: project.data_dir().join(match &file.format {
+                    FileFormat::TOML => format!("{}.toml", file.name),
+                    FileFormat::JSON => format!("{}.json", file.name),
+                    FileFormat::Plain => file.name.clone(),
+                }),
+                format: file.format,
+                content: file.content.clone(),
+            })
+            .collect();
 
         for file in files {
             let name = match &file.format {
@@ -252,7 +261,7 @@ impl Project {
                     name: file_name.to_string(),
                     path: entry.path().to_path_buf(),
                     format: FileFormat::TOML,
-                    content: std::fs::read_to_string(entry.path())?
+                    content: std::fs::read_to_string(entry.path())?,
                 };
                 files.push(file)
             }
@@ -261,7 +270,7 @@ impl Project {
                     name: file_name.to_string(),
                     path: entry.path().to_path_buf(),
                     format: FileFormat::JSON,
-                    content: std::fs::read_to_string(entry.path())?
+                    content: std::fs::read_to_string(entry.path())?,
                 };
                 files.push(file)
             }
