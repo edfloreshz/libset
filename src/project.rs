@@ -113,6 +113,26 @@ impl Project {
         }
     }
 
+    /// Returns whether the project exists in the filesystem.
+    ///
+    /// This includes both legacy and new projects.
+    ///
+    /// Example:
+    /// ```rust
+    /// use libset::project::Project;
+    /// use anyhow::Result;
+    ///
+    /// fn main() -> Result<()> {
+    ///     let project = Project::exists("com", "organization", "Example");
+    ///     assert_eq!(project.is_none(), true);
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn exists(qualifier: &str, organization: &str, application: &str) -> Option<PathBuf> {
+        ProjectDirs::from(qualifier, organization, application)
+            .map(|project| project.data_dir().to_path_buf())
+    }
+
     /// Sets the author of the program.
     ///
     /// ```rust
