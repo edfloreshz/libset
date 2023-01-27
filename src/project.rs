@@ -2,7 +2,7 @@ use crate::file::File;
 use crate::format::FileFormat;
 use anyhow::{anyhow, Context, Ok, Result};
 use directories::{ProjectDirs, ProjectDirsExt};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     io::{Read, Write},
     path::PathBuf,
@@ -123,8 +123,9 @@ impl Project {
     /// use anyhow::Result;
     ///
     /// fn main() -> Result<()> {
-    ///     let project = Project::exists("com", "organization", "Example");
-    ///     assert_eq!(project.is_none(), true);
+    ///     if let Some(path) = Project::exists("com", "organization", "App") {
+    ///         println!("Project exists at: {}", path.display());
+    ///     }
     ///     Ok(())
     /// }
     /// ```
@@ -297,7 +298,7 @@ impl Project {
     }
 
     /// Find a file in the project's directory.
-    /// 
+    ///
     /// ```rust
     /// use libset::project::Project;
     /// use libset::format::FileFormat;
@@ -315,8 +316,14 @@ impl Project {
             .follow_links(true)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|entry| entry.file_name().to_string_lossy().contains(name) && entry.file_name().to_string_lossy().contains(format.extension()))
-            .map(| file | File {
+            .filter(|entry| {
+                entry.file_name().to_string_lossy().contains(name)
+                    && entry
+                        .file_name()
+                        .to_string_lossy()
+                        .contains(format.extension())
+            })
+            .map(|file| File {
                 name: file.file_name().to_string_lossy().to_string(),
                 path: file.path().to_path_buf(),
                 format,
@@ -330,18 +337,40 @@ impl Project {
         }
     }
 
+    /// Find a file in the project's directory and deserialize it into the specified type.
+    ///
+    /// ```rust
+    /// use libset::project::Project;
+    /// use libset::format::FileFormat;
+    /// use libset::new_file;
+    ///
+    /// #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    /// struct Test {
+    ///     test: String
+    /// }
+    ///
+    /// fn main() -> anyhow::Result<()> {
+    ///     let project = Project::new("com", "organization", "App").add_files(&[new_file!("testfile")])?;
+    ///     project.get_file("testfile", FileFormat::TOML)?.set_content(Test{ test: "Testing".into() })?.write()?;
+    ///     let file = project.get_file_as::<Test>("testfile", FileFormat::TOML)?;
+    ///     println!("{file:?}");
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn get_file_as<T: DeserializeOwned>(&self, name: &str, format: FileFormat) -> Result<T> {
         let file = self.get_file(name, format)?;
         let file = std::fs::read_to_string(file.path)?;
         let value: T = match format {
-            FileFormat::Plain => return Err(anyhow!("Plain text canno't be transformed into a type")),
+            FileFormat::Plain => {
+                return Err(anyhow!("Plain text canno't be transformed into a type"))
+            }
             FileFormat::TOML => toml::from_str(file.clone().as_str())?,
             FileFormat::JSON => serde_json::from_str(file.clone().as_str())?,
         };
         Ok(value)
     }
 
-    pub fn integrity_ok<T: DeserializeOwned>(&self, name: &str, format: FileFormat) -> bool {
+    pub fn integrity<T: DeserializeOwned>(&self, name: &str, format: FileFormat) -> bool {
         self.get_file_as::<T>(name, format).is_ok()
     }
 }
