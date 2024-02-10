@@ -8,7 +8,7 @@ struct Settings {
 
 fn main() -> Result<(), Error> {
     let config = Config::new("org.example.Demo", 1, None)?;
-    let demo: Settings = config.get_toml("config")?;
-    println!("{demo:?}");
+    let settings: Settings = config.get_json("settings")?;
+    println!("{settings:?}");
     Ok(())
 }

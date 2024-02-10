@@ -19,18 +19,23 @@ pub enum Error {
     #[error("Failed to get key {0} : {1}")]
     GetKey(String, std::io::Error),
     /// Represents a failure to parse a ron file.
+    #[cfg(feature = "ron")]
     #[error("Failed to parse ron file: {0}")]
     Ron(ron::Error),
     /// Represents a failure to parse a ron file with span information.
+    #[cfg(feature = "ron")]
     #[error("Failed to parse ron file: {0}")]
     RonSpanned(ron::error::SpannedError),
     /// Represents a failure to parse a json file.
+    #[cfg(feature = "json")]
     #[error("Failed to parse json file: {0}")]
     Json(serde_json::Error),
     /// Represents a failure to serialize a toml file.
+    #[cfg(feature = "toml")]
     #[error("Failed to serialize toml file: {0}")]
     TomlSerialize(toml::ser::Error),
     /// Represents a failure to deserialize a toml file.
+    #[cfg(feature = "toml")]
     #[error("Failed to deserialize toml file: {0}")]
     TomlDeserialize(toml::de::Error),
     /// Represents a generic string error.
@@ -56,30 +61,35 @@ impl From<std::io::Error> for Error {
     }
 }
 
+#[cfg(feature = "ron")]
 impl From<ron::Error> for Error {
     fn from(f: ron::Error) -> Self {
         Self::Ron(f)
     }
 }
 
+#[cfg(feature = "ron")]
 impl From<ron::error::SpannedError> for Error {
     fn from(f: ron::error::SpannedError) -> Self {
         Self::RonSpanned(f)
     }
 }
 
+#[cfg(feature = "json")]
 impl From<serde_json::Error> for Error {
     fn from(f: serde_json::Error) -> Self {
         Self::Json(f)
     }
 }
 
+#[cfg(feature = "toml")]
 impl From<toml::de::Error> for Error {
     fn from(f: toml::de::Error) -> Self {
         Self::TomlDeserialize(f)
     }
 }
 
+#[cfg(feature = "toml")]
 impl From<toml::ser::Error> for Error {
     fn from(f: toml::ser::Error) -> Self {
         Self::TomlSerialize(f)

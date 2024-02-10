@@ -5,16 +5,22 @@ use tracing::error;
 use crate::Error;
 
 pub(crate) enum FileType {
+    #[cfg(feature = "toml")]
     Toml,
+    #[cfg(feature = "json")]
     Json,
+    #[cfg(feature = "ron")]
     Ron,
 }
 
 impl Display for FileType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(feature = "toml")]
             FileType::Toml => write!(f, "toml"),
+            #[cfg(feature = "json")]
             FileType::Json => write!(f, "json"),
+            #[cfg(feature = "ron")]
             FileType::Ron => write!(f, "ron"),
         }
     }
