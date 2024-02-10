@@ -4,7 +4,7 @@ use tracing::error;
 
 use crate::Error;
 
-pub enum FileType {
+pub(crate) enum FileType {
     Toml,
     Json,
     Ron,
@@ -20,7 +20,16 @@ impl Display for FileType {
     }
 }
 
-/// Check that the name is relative and doesn't contain . or ..
+/// Check that the name is relative.
+///
+/// # Arguments
+///
+/// * `name` - The name to be sanitized
+///
+/// # Returns
+///
+/// Returns a `Result` containing a reference to the sanitized `Path` if the name is valid,
+/// otherwise returns an `Error` indicating the invalid name.
 pub(crate) fn sanitize_name(name: &str) -> Result<&Path, Error> {
     let path = Path::new(name);
     if path

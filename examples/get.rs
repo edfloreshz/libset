@@ -1,4 +1,4 @@
-use libset::{Config, Error, FileType, Get};
+use libset::{Config, Error};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -8,7 +8,7 @@ struct Settings {
 
 fn main() -> Result<(), Error> {
     let config = Config::new("org.example.Demo", 1, None)?;
-    let demo: Settings = config.get("config", FileType::Toml)?;
+    let demo: Settings = config.get_toml("config")?;
     println!("{demo:?}");
     Ok(())
 }

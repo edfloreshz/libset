@@ -8,15 +8,27 @@ mod traits;
 mod utils;
 
 pub use error::Error;
-pub use traits::{Get, Set};
+use traits::{Get, Set};
 use utils::sanitize_name;
-pub use utils::FileType;
+use utils::FileType;
 
+/// Represents a configuration object.
 pub struct Config {
     path: PathBuf,
 }
 
 impl Config {
+    /// Creates a new `Config` object.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the application.
+    /// * `version` - The version of the configuration.
+    /// * `prefix` - An optional prefix for the application.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the new `Config` object or an `Error` if an error occurred.
     pub fn new(name: &str, version: u64, prefix: Option<&str>) -> Result<Self, Error> {
         let path = sanitize_name(name)?.join(format!("v{}", version));
 
@@ -34,11 +46,137 @@ impl Config {
         Ok(Self { path: config_path })
     }
 
-    pub fn has_key(&self, key: &str, file_type: &FileType) -> bool {
-        self.path.join(format!("{key}.{file_type}")).exists()
+    /// Determines if a toml file with the given key is present in the filesystem.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the toml file exists, `false` otherwise.
+    pub fn has_toml(&self, key: &str) -> bool {
+        self.path.join(format!("{key}.{}", FileType::Toml)).exists()
     }
 
-    pub fn path(&self, key: &str, file_type: &FileType) -> Result<PathBuf, Error> {
+    /// Determines if a json file with the given key is present in the filesystem.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the json file exists, `false` otherwise.
+    pub fn has_json(&self, key: &str) -> bool {
+        self.path.join(format!("{key}.{}", FileType::Json)).exists()
+    }
+
+    /// Determines if a ron file with the given key is present in the filesystem.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the ron file exists, `false` otherwise.
+    pub fn has_ron(&self, key: &str) -> bool {
+        self.path.join(format!("{key}.{}", FileType::Ron)).exists()
+    }
+
+    /// Gets the content of a toml file with the given key and deserializes it into a type.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized value or an `Error` if an error occurred.
+    pub fn get_toml<T: DeserializeOwned>(&self, key: &str) -> Result<T, Error> {
+        self.get(key, FileType::Toml)
+    }
+
+    /// Gets the content of a json file with the given key and deserializes it into a type.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized value or an `Error` if an error occurred.
+    pub fn get_json<T: DeserializeOwned>(&self, key: &str) -> Result<T, Error> {
+        self.get(key, FileType::Json)
+    }
+
+    /// Gets the content of a ron file with the given key and deserializes it into a type.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized value or an `Error` if an error occurred.
+    pub fn get_ron<T: DeserializeOwned>(&self, key: &str) -> Result<T, Error> {
+        self.get(key, FileType::Ron)
+    }
+
+    /// Sets the content of a toml file with the given key and serializes the value.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `value` - The value to be serialized and stored.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if an error occurred.
+    pub fn set_toml<T: Serialize>(&self, key: &str, value: T) -> Result<(), Error> {
+        self.set(key, FileType::Toml, value)
+    }
+
+    /// Sets the content of a json file with the given key and serializes the value.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `value` - The value to be serialized and stored.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if an error occurred.
+    pub fn set_json<T: Serialize>(&self, key: &str, value: T) -> Result<(), Error> {
+        self.set(key, FileType::Json, value)
+    }
+
+    /// Sets the content of a ron file with the given key and serializes the value.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `value` - The value to be serialized and stored.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if an error occurred.
+    pub fn set_ron<T: Serialize>(&self, key: &str, value: T) -> Result<(), Error> {
+        self.set(key, FileType::Ron, value)
+    }
+
+    /// Given a key, returns the file path in the filesystem.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `file_type` - The file extension.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the file path or an `Error` if an error occurred.
+    fn path(&self, key: &str, file_type: &FileType) -> Result<PathBuf, Error> {
         let path = self
             .path
             .join(sanitize_name(&format!("{key}.{file_type}"))?);
@@ -48,6 +186,16 @@ impl Config {
 }
 
 impl Get for Config {
+    /// Given a key, obtains the file and parses it into a type.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `file_type` - The file extension.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized value or an `Error` if an error occurred.
     fn get<T: DeserializeOwned>(&self, key: &str, file_type: FileType) -> Result<T, Error> {
         let key_path = self.path(key, &file_type)?;
         let data = std::fs::read_to_string(&key_path)
@@ -64,7 +212,17 @@ impl Get for Config {
 }
 
 impl Set for Config {
-    fn set<T: Serialize>(&self, key: &str, value: T, file_type: FileType) -> Result<(), Error> {
+    /// Given a key, saves the serialized value to the file.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `file_type` - The file extension.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized value or an `Error` if an error occurred.
+    fn set<T: Serialize>(&self, key: &str, file_type: FileType, value: T) -> Result<(), Error> {
         let key_path = self.path(key, &file_type)?;
         let data = match file_type {
             FileType::Toml => toml::to_string_pretty(&value)?,
