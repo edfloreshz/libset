@@ -42,7 +42,7 @@ mod utils;
 pub use error::Error;
 use traits::{Get, Set};
 use utils::sanitize_name;
-use utils::FileType;
+pub use utils::FileType;
 
 /// Represents a configuration object.
 ///
@@ -97,6 +97,19 @@ impl Config {
         std::fs::create_dir_all(&config_path)?;
 
         Ok(Self { path: config_path })
+    }
+
+    /// Determines if a plain file with the given key is present in the filesystem.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the plain file exists, `false` otherwise.
+    pub fn has_plain(&self, key: &str) -> bool {
+        self.path.join(key).exists()
     }
 
     /// Determines if a toml file with the given key is present in the filesystem.
@@ -183,6 +196,20 @@ impl Config {
         self.get(key, FileType::Ron)
     }
 
+    /// Gets the content of a plain file with the given key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the value or an `Error` if an error occurred.
+    pub fn get_plain(&self, key: &str) -> Result<String, Error> {
+        std::fs::read_to_string(self.path.join(key))
+            .map_err(|err| Error::GetKey(key.to_string(), err))
+    }
+
     /// Sets the content of a toml file with the given key and serializes the value.
     ///
     /// # Arguments
@@ -228,6 +255,23 @@ impl Config {
         self.set(key, FileType::Ron, value)
     }
 
+    /// Sets the content of a plain file with the given key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key used to store the file.
+    /// * `value` - String to write.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if an error occurred.
+    pub fn set_plain(&self, key: &str, value: impl ToString) -> Result<(), Error> {
+        let key_path = self.path.join(key);
+        atomicwrites::AtomicFile::new(&key_path, atomicwrites::OverwriteBehavior::AllowOverwrite)
+            .write(|file| file.write_all(value.to_string().as_bytes()))?;
+        Ok(())
+    }
+
     /// Given a key, returns the file path in the filesystem.
     ///
     /// # Arguments
@@ -238,7 +282,7 @@ impl Config {
     /// # Returns
     ///
     /// A `Result` containing the file path or an `Error` if an error occurred.
-    fn path(&self, key: &str, file_type: &FileType) -> Result<PathBuf, Error> {
+    pub fn path(&self, key: &str, file_type: FileType) -> Result<PathBuf, Error> {
         let path = self
             .path
             .join(sanitize_name(&format!("{key}.{file_type}"))?);
@@ -259,7 +303,7 @@ impl Get for Config {
     ///
     /// A `Result` containing the deserialized value or an `Error` if an error occurred.
     fn get<T: DeserializeOwned>(&self, key: &str, file_type: FileType) -> Result<T, Error> {
-        let key_path = self.path(key, &file_type)?;
+        let key_path = self.path(key, file_type)?;
         let data = std::fs::read_to_string(&key_path)
             .map_err(|err| Error::GetKey(key.to_string(), err))?;
 
@@ -288,7 +332,7 @@ impl Set for Config {
     ///
     /// A `Result` containing the deserialized value or an `Error` if an error occurred.
     fn set<T: Serialize>(&self, key: &str, file_type: FileType, value: T) -> Result<(), Error> {
-        let key_path = self.path(key, &file_type)?;
+        let key_path = self.path(key, file_type)?;
         let data = match file_type {
             #[cfg(feature = "toml")]
             FileType::Toml => toml::to_string_pretty(&value)?,

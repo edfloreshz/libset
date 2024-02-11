@@ -4,7 +4,8 @@ use tracing::error;
 
 use crate::Error;
 
-pub(crate) enum FileType {
+#[derive(Debug, Clone, Copy)]
+pub enum FileType {
     #[cfg(feature = "toml")]
     Toml,
     #[cfg(feature = "json")]
