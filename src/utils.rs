@@ -4,8 +4,9 @@ use tracing::error;
 
 use crate::Error;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FileType {
+    Plain,
     #[cfg(feature = "toml")]
     Toml,
     #[cfg(feature = "json")]
@@ -23,6 +24,7 @@ impl Display for FileType {
             FileType::Json => write!(f, "json"),
             #[cfg(feature = "ron")]
             FileType::Ron => write!(f, "ron"),
+            FileType::Plain => write!(f, ""),
         }
     }
 }

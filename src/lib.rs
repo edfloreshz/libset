@@ -283,9 +283,12 @@ impl Config {
     ///
     /// A `Result` containing the file path or an `Error` if an error occurred.
     pub fn path(&self, key: &str, file_type: FileType) -> Result<PathBuf, Error> {
-        let path = self
-            .path
-            .join(sanitize_name(&format!("{key}.{file_type}"))?);
+        let name = if FileType::Plain == file_type {
+            key.to_string()
+        } else {
+            format!("{key}.{file_type}")
+        };
+        let path = self.path.join(sanitize_name(&name)?);
         info!("Found key {}.", key);
         Ok(path)
     }
@@ -314,6 +317,7 @@ impl Get for Config {
             FileType::Json => serde_json::from_str(&data)?,
             #[cfg(feature = "ron")]
             FileType::Ron => ron::from_str(&data)?,
+            FileType::Plain => unreachable!("Never get plain text with get method."),
         };
         info!("Retrieved file from {}.", key_path.display());
         Ok(t)
@@ -340,6 +344,7 @@ impl Set for Config {
             FileType::Json => serde_json::to_string_pretty(&value)?,
             #[cfg(feature = "ron")]
             FileType::Ron => ron::ser::to_string_pretty(&value, ron::ser::PrettyConfig::new())?,
+            FileType::Plain => unreachable!("Never get plain text with get method."),
         };
         atomicwrites::AtomicFile::new(&key_path, atomicwrites::OverwriteBehavior::AllowOverwrite)
             .write(|file| file.write_all(data.as_bytes()))?;
