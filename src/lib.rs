@@ -292,6 +292,15 @@ impl Config {
         info!("Found key {}.", key);
         Ok(path)
     }
+
+    /// Removes all files in the configuration path.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the file path or an `Error` if an error occurred.
+    pub fn clean(&self) -> Result<(), Error> {
+        std::fs::remove_dir_all(&self.path.parent().unwrap()).map_err(|err| Error::Io(err))
+    }
 }
 
 impl Get for Config {
